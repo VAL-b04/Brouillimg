@@ -77,7 +77,10 @@ public class Brouillimg
     public static int[] generatePermutation(int size, int key)
     {
         int[] scrambleTable = new int[size];
-        for (int i = 0; i < size; i++) scrambleTable[i] = i;
+        for (int i = 0; i < size; i++) 
+	{
+	    scrambleTable[i] = scrambledId(i, size, key);
+	}
         return scrambleTable;
     }
 
@@ -107,6 +110,30 @@ public class Brouillimg
      */
     public static int scrambledId(int id, int size, int key)
     {
-        return id;
+	int s = getSKey(key);
+	int r = getRKey(key);
+        return ((r + (2 * s + 1) * id) % size);
+    }
+
+    /**
+     * Renvoie le paramètre s de la clé key
+     * @param key clé de brouillage (15 bits)
+     * @return paramètre s de la clé (7 bits)
+     */
+    public static int getSKey(int key)
+    {
+	// masque binaire pour récupérer les 7 derniers bits
+	return key & 0x7F;
+    }
+
+    /**
+     * Renvoie le paramètre r de la clé key
+     * @param key clé de brouillage (15 bits)
+     * @return paramètre r de la clé (8 bits)
+     */
+    public static int getRKey(int key)
+    {
+	// division par 2^7 pour décaler les 8 bits de r 7 fois vers la droite
+	return key / 128;
     }
 }
