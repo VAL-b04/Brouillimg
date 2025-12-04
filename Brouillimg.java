@@ -78,9 +78,9 @@ public class Brouillimg
     {
         int[] scrambleTable = new int[size];
         for (int i = 0; i < size; i++) 
-	{
-	    scrambleTable[i] = scrambledId(i, size, key);
-	}
+        {
+            scrambleTable[i] = scrambledId(i, size, key);
+        }
         return scrambleTable;
     }
 
@@ -101,6 +101,35 @@ public class Brouillimg
         return out;
     }
 
+    public static void getLinesFromImage(BufferedImage inputImg)
+    {
+
+    }
+
+    /**
+     * Renvoie un tableau des lignes de l'image.
+     * Chaque ligne est composée de tableau représentant les valeurs rgb de chaque pixel
+     * @param pixels tableau de toutes les valeurs rgb de tous les pixels de toutes les lignes de l'image
+     * @return tableau contenant les lignes, qui contiennent, les pixels, qui contiennent les valeurs rgb.
+     */
+    public static int[][][] convertPixelsToLines(int[] pixels, int w, int h)
+    {
+        int[][][] pixelsLignes = new int[h][][];
+        for (int y = 0; y < h; y++)
+        {
+            pixelsLignes[y] = new int[w][];
+            for (int x = 0; x < w; x++)
+            {
+                int pixelIndex = (y*w + x) * 3;
+                pixelsLignes[y][x] = new int[3];
+                pixelsLignes[y][x][0] = pixels[pixelIndex];
+                pixelsLignes[y][x][1] = pixels[pixelIndex+1];
+                pixelsLignes[y][x][2] = pixels[pixelIndex+2];
+            }
+        }
+        return pixelsLignes;
+    }
+
     /**
      * Renvoie la position de la ligne id dans l'image brouillée.
      * @param id  indice de la ligne dans l'image claire (0..size-1)
@@ -110,8 +139,8 @@ public class Brouillimg
      */
     public static int scrambledId(int id, int size, int key)
     {
-	int s = getSKey(key);
-	int r = getRKey(key);
+        int s = getSKey(key);
+        int r = getRKey(key);
         return ((r + (2 * s + 1) * id) % size);
     }
 
@@ -122,8 +151,8 @@ public class Brouillimg
      */
     public static int getSKey(int key)
     {
-	// masque binaire pour récupérer les 7 derniers bits
-	return key & 0x7F;
+        // masque binaire pour récupérer les 7 derniers bits
+        return key & 0x7F;
     }
 
     /**
@@ -133,7 +162,7 @@ public class Brouillimg
      */
     public static int getRKey(int key)
     {
-	// division par 2^7 pour décaler les 8 bits de r 7 fois vers la droite
-	return key / 128;
+        // division par 2^7 pour décaler les 8 bits de r 7 fois vers la droite
+        return key / 128;
     }
 }
