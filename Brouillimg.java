@@ -11,15 +11,16 @@ public class Brouillimg
 
     public static void main(String[] args) throws IOException
     {
-        if (args.length < 2)
+        if (args.length < 3)
         {
-            System.err.println("Usage: java Brouillimg <image_claire> <clé> [image_sortie]");
+            System.err.println("Usage: java Brouillimg <image_claire> <clé> [image_sortie] <process>");
             System.exit(1);
         }
         String inPath = args[0];
         String outPath = (args.length >= 3) ? args[2] : "out.png";
         // Masque 0x7FFF pour garantir que la clé ne dépasse pas les 15 bits
         int key = Integer.parseInt(args[1]) & 0x7FFF ;
+        int process = Integer.parseInt(args[3]);
 
         BufferedImage inputImage = ImageIO.read(new File(inPath));
         if (inputImage == null)
@@ -36,9 +37,40 @@ public class Brouillimg
 
         int[] perm = generatePermutation(height, key);
 
-        BufferedImage scrambledImage = scrambleLines(inputImage, perm);
-        ImageIO.write(scrambledImage, "png", new File(outPath));
-        System.out.println("Image écrite: " + outPath);
+        if (process == 0)
+        {
+            BufferedImage scrambledImage = scrambleLines(inputImage, perm);
+            ImageIO.write(scrambledImage, "png", new File(outPath));
+            System.out.println("Image écrite: " + outPath);
+        } 
+        else
+        {
+            BufferedImage unScrambledImage = unScrambleLines(inputImage, perm);
+            ImageIO.write(unScrambledImage, "png", new File(outPath));
+            System.out.println("Image déchifrée: " + outPath);
+        }
+        
+    }
+
+    /**
+     * Affiche un tableau de int
+     * @param arr tableau à afficher
+     */
+     public static void printArray(int[] arr)
+    {
+        System.out.println("[");
+        for (int i = 0; i < arr.length; i++)
+        {
+            if (i == arr.length - 1)
+            {
+                System.out.print(arr[i] + " ");
+            }
+            else
+            {
+                System.out.print(arr[i] + "; ");
+            }
+        }
+        System.out.println("]");
     }
 
     /**
@@ -99,29 +131,9 @@ public class Brouillimg
             throw new IllegalArgumentException("Taille d'image <> taille permutation");
         }
 
-        // Table inverse : scrambleTable[y] indique d'où provient la ligne y dans l'image brouillée
-        int[] scrambleTable = new int[height];
-        
-        for (int i = 0; i < height; i++)
-        {
-            scrambleTable[perm[i]] = i;
-        }
-
         // Affichage du tableau de permutation
-        System.out.println("Table de permutation générée : [");
-        for (int i = 0; i < height; i++)
-        {
-            if (i == height - 1)
-            {
-                System.out.print(scrambleTable[i] + " ");
-                break;
-            }
-            else
-            {
-                System.out.print(scrambleTable[i] + "; ");
-            }
-        }
-        System.out.println("]");
+        System.out.print("Table de permutation générée :");
+        printArray(perm);
 
         BufferedImage outputImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         
@@ -130,7 +142,7 @@ public class Brouillimg
         {
             for (int x = 0; x < width; x++)
             {
-                outputImg.setRGB(x, y, inputImg.getRGB(x, scrambleTable[y]));
+                outputImg.setRGB(x, y, inputImg.getRGB(x, perm[y]));
             }
         }
 
@@ -145,7 +157,20 @@ public class Brouillimg
      */
     public static BufferedImage unScrambleLines(BufferedImage inputImg, int[] perm)
     {
-        None
+        int width = inputImg.getWidth();
+        int height = inputImg.getHeight();
+
+        BufferedImage outputImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                outputImg.setRGB(x, perm[y], inputImg.getRGB(x, y));
+            }
+        }
+
+        return outputImg;
     }
 
     /**
