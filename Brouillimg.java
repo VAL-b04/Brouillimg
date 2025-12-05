@@ -56,7 +56,7 @@ public class Brouillimg
      * Affiche un tableau de int
      * @param arr tableau à afficher
      */
-     public static void printArray(int[] arr)
+    public static void printArray(int[] arr)
     {
         System.out.println("[");
         for (int i = 0; i < arr.length; i++)
@@ -97,6 +97,7 @@ public class Brouillimg
                 outGL[y][x] = gray;
             }
         }
+
         return outGL;
     }
 
@@ -209,6 +210,7 @@ public class Brouillimg
         return key / 128;
     }
 
+    // BRUTE FORCE
     /**
      * Calcule la distance euclidienne entre deux lignes de pixels d'une image.
      * @param imageGL matrice de l'image en noir et blanc
@@ -218,7 +220,7 @@ public class Brouillimg
      */
     public static double euclideanDistance(int[][] imageGL, int ligne1, int ligne2)
     {
-        double somme = 0;
+        double somme = 0.0;
         int width = imageGL[0].length;
 
         for (int i = 0; i < width; i++)
@@ -246,17 +248,113 @@ public class Brouillimg
         return score;
     }
 
+    // CORRÉLATION DE PEARSON
+    /**
+     * Calcule le coefficient de corrélation de Pearson entre deux lignes de pixels d'une image.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @param ligne1 indice de la première ligne
+     * @param ligne2 indice de la deuxième ligne
+     * @return coefficient de corrélation (entre -1 et 1)
+     */
+    public static double pearsonCorrelation(int[][] imageGL, int ligne1, int ligne2)
+    {
+        int width = imageGL[0].length;
+        double moyenneX = 0.0;
+        double moyenneY = 0.0;
+
+        // Calcul des moyennes de x et y
+        for (int i = 0; i < width; i++)
+        {
+            moyenneX += imageGL[ligne1][i];
+            moyenneY += imageGL[ligne2][i];
+        }
+
+        moyenneX /= width;
+        moyenneY /= width;
+
+        double numerateur = 0.0;
+        double sommeX = 0.0;
+        double sommeY = 0.0;
+
+        // Calcul de la corrélation de Pearson
+        for (int i = 0; i < width; i++)
+        {
+            double diffX = imageGL[ligne1][i] - moyenneX;
+            double diffY = imageGL[ligne2][i] - moyenneY;
+
+            numerateur += diffX * diffY;
+            sommeX += diffX * diffX;
+            sommeY += diffY * diffY;
+        }
+
+        // Calcul du dénominateur
+        double denominateur = Math.sqrt(sommeX) * Math.sqrt(sommeY);
+
+        // Éviter la division par zéro
+        if (denominateur == 0)
+        {
+            return 0.0;
+        }
+
+        return numerateur / denominateur;
+    }
+
+    /**
+     * Calcule le score total d'une image en sommant les corrélations de Pearson 
+     * entre chaque paire de lignes consécutives.
+     * Plus le score est ÉLEVÉ, plus l'image est probablement correcte.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @return score Pearson total
+     */
+    public static double scorePearson(int[][] imageGL)
+    {
+        double score = 0.0;
+        int height = imageGL.length;
+
+        // Parcours toutes les paires de lignes consécutives
+        for (int i = 0; i < height - 1; i++)
+        {
+            score += pearsonCorrelation(imageGL, i, i + 1);
+        }
+
+        return score;
+    }
+
+    // BREAKKEY
     /**
      * Teste toutes les clés possibles pour identifier la clé qui produit l'image la plus cohérente.
      * @param scrambledImage l'image brouillée à déchiffrer
+     * @param methodeType type de score à utiliser : "Euclide" ou "Pearson"
      * @return la clé qui donne le meilleur résultat
      */
-    public static int breakKey(BufferedImage scrambledImage)
+    public static int breakKey(BufferedImage scrambledImage, String methodeType)
     {
         int height = scrambledImage.getHeight();
-        double bestScore = Double.MAX_VALUE; // Valeur maximale
-        int bestKey = 0;
+
+        int bestKey = -1;
+        double bestScore;
+
+        // Pour Euclide : on cherche le score MIN (distance faible)
+        // Pour Pearson : on cherche le score MAX (corrélation élevée)
+        if (methodeType.equalsIgnoreCase("Euclide"))
+        {
+            bestScore = Double.MAX_VALUE;  // MAX pour chercher le MIN
+        }
+        else // Pearson
+        {
+            bestScore = Double.MIN_VALUE;  // MIN pour chercher le MAX
+        }
+
         double[][] top10Key = new double[10][2];
+
+        // Initialise le tableau top10
+        for (int i = 0; i < top10Key.length; i++)
+        {
+            top10Key[i][0] = bestScore;
+            top10Key[i][1] = -1;
+        }
+
+        System.out.println("Recherche de la clé avec le critère : " + methodeType);
 
         // Teste toutes les clés possibles (2^15 = 32768)
         for (int key = 0; key < 32768; key++)
@@ -267,43 +365,48 @@ public class Brouillimg
             // Déchiffre l'image avec cette clé
             BufferedImage unscrambledImage = unScrambleLines(scrambledImage, perm);
 
-            // Convertie en niveaux de gris
+            // Convertit en niveaux de gris
             int[][] imageGL = rgb2gl(unscrambledImage);
 
-            // Calcul le score euclidien
-            double score = scoreEuclidean(imageGL);
+            // Calcule le score selon le type choisi
+            double score;
 
-            // Garde la meilleure clé
-            if (score < bestScore)
+            // Appelle de la méthode appropriée
+            if (methodeType.equalsIgnoreCase("Euclide"))
             {
-                bestScore = score;
-                bestKey = key;
+                score = scoreEuclidean(imageGL);
             }
+            else  // Pearson
+            {
+                score = scorePearson(imageGL);
+            }
+
+            bestScore = score;
+            bestKey = key;
 
             // Classement des 10 meilleures clés
             for (int i = 0; i < top10Key.length; i++)
             {
-                if (score < top10Key[i][0])
+                // Décale les éléments
+                for (int j = top10Key.length - 1; j > i; j--)
                 {
-                    for (int j = top10Key.length - 1; j > i; j--)
-                    {
-                        top10Key[j][0] = top10Key[j - 1][0];
-                        top10Key[j][1] = top10Key[j - 1][1];
-                    }
-                    top10Key[i][0] = score;
-                    top10Key[i][1] = key;
-                    break;
+                    top10Key[j][0] = top10Key[j - 1][0];
+                    top10Key[j][1] = top10Key[j - 1][1];
                 }
+                top10Key[i][0] = score;
+                top10Key[i][1] = key;
+                break;
             }
         }
 
-        // Affiche le résultat final
-        System.out.println("\nClé trouvée: " + bestKey + " avec un score de : " + bestScore);
+        // Affiche le résultat final avec les bonnes valeurs
+        System.out.println("La méthode : " + methodeType + " avec la clé " + bestKey + " a obtenu un score de " + bestScore + "\n");
 
-        System.out.println("Affichage des 10 meilleurs clès ainsi que leur score\n");
+        System.out.println("Top 10 des clés : ");
+
         for (int i = 0; i < top10Key.length; i++)
         {
-            if (top10Key[i][1] != -1)  // Vérifie qu'une clé valide existe
+            if (top10Key[i][1] != -1)
             {
                 System.out.println("Position " + (i+1) + " : Clé " + (int)top10Key[i][1] + " | Score : " + top10Key[i][0]);
             }
