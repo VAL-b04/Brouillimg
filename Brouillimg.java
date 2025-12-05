@@ -8,7 +8,6 @@ import java.util.stream.IntStream;
 
 public class Brouillimg
 {
-
     public static void main(String[] args) throws IOException
     {
         if (args.length < 3)
@@ -42,14 +41,13 @@ public class Brouillimg
             BufferedImage scrambledImage = scrambleLines(inputImage, perm);
             ImageIO.write(scrambledImage, "png", new File(outPath));
             System.out.println("Image écrite: " + outPath);
-        } 
+        }
         else
         {
             BufferedImage unScrambledImage = unScrambleLines(inputImage, perm);
             ImageIO.write(unScrambledImage, "png", new File(outPath));
             System.out.println("Image déchifrée: " + outPath);
         }
-        
     }
 
     /**
