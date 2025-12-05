@@ -77,7 +77,7 @@ public class Brouillimg
     public static int[] generatePermutation(int size, int key)
     {
         int[] scrambleTable = new int[size];
-        for (int i = 0; i < size; i++) 
+        for (int i = 0; i < size; i++)
         {
             scrambleTable[i] = scrambledId(i, size, key);
         }
@@ -94,40 +94,58 @@ public class Brouillimg
     {
         int width = inputImg.getWidth();
         int height = inputImg.getHeight();
-        if (perm.length != height) throw new IllegalArgumentException("Taille d'image <> taille permutation");
+        if (perm.length != height)
+        {
+            throw new IllegalArgumentException("Taille d'image <> taille permutation");
+        }
 
-        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        // Table inverse : scrambleTable[y] indique d'où provient la ligne y dans l'image brouillée
+        int[] scrambleTable = new int[height];
+        
+        for (int i = 0; i < height; i++)
+        {
+            scrambleTable[perm[i]] = i;
+        }
 
-        return out;
-    }
+        // Affichage du tableau de permutation
+        System.out.println("Table de permutation générée : [");
+        for (int i = 0; i < height; i++)
+        {
+            if (i == height - 1)
+            {
+                System.out.print(scrambleTable[i] + " ");
+                break;
+            }
+            else
+            {
+                System.out.print(scrambleTable[i] + "; ");
+            }
+        }
+        System.out.println("]");
 
-    public static void getLinesFromImage(BufferedImage inputImg)
-    {
+        BufferedImage outputImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        
+        // Copie des lignes selon la permutation
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                outputImg.setRGB(x, y, inputImg.getRGB(x, scrambleTable[y]));
+            }
+        }
 
+        return outputImg;
     }
 
     /**
-     * Renvoie un tableau des lignes de l'image.
-     * Chaque ligne est composée de tableau représentant les valeurs rgb de chaque pixel
-     * @param pixels tableau de toutes les valeurs rgb de tous les pixels de toutes les lignes de l'image
-     * @return tableau contenant les lignes, qui contiennent, les pixels, qui contiennent les valeurs rgb.
+     * Reconstitue l'image originale en dé-mélangeant les lignes selon une permutation donnée.
+     * @param inputImg image brouillée
+     * @param perm permutation des lignes (taille = hauteur de l'image)
+     * @return image de sortie avec les lignes remises dans l'ordre original
      */
-    public static int[][][] convertPixelsToLines(int[] pixels, int w, int h)
+    public static BufferedImage unScrambleLines(BufferedImage inputImg, int[] perm)
     {
-        int[][][] pixelsLignes = new int[h][][];
-        for (int y = 0; y < h; y++)
-        {
-            pixelsLignes[y] = new int[w][];
-            for (int x = 0; x < w; x++)
-            {
-                int pixelIndex = (y*w + x) * 3;
-                pixelsLignes[y][x] = new int[3];
-                pixelsLignes[y][x][0] = pixels[pixelIndex];
-                pixelsLignes[y][x][1] = pixels[pixelIndex+1];
-                pixelsLignes[y][x][2] = pixels[pixelIndex+2];
-            }
-        }
-        return pixelsLignes;
+        None
     }
 
     /**
@@ -151,7 +169,7 @@ public class Brouillimg
      */
     public static int getSKey(int key)
     {
-        // masque binaire pour récupérer les 7 derniers bits
+	    // masque binaire pour récupérer les 7 derniers bits
         return key & 0x7F;
     }
 
@@ -164,5 +182,108 @@ public class Brouillimg
     {
         // division par 2^7 pour décaler les 8 bits de r 7 fois vers la droite
         return key / 128;
+    }
+
+    /**
+     * Calcule la distance euclidienne entre deux lignes de pixels d'une image.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @param ligne1 indice de la première ligne
+     * @param ligne2 indice de la deuxième ligne
+     * @return distance euclidienne moyenne entre les deux lignes
+     */
+    public static double euclideanDistance(int[][] imageGL, int ligne1, int ligne2)
+    {
+        double somme = 0;
+        int width = imageGL[0].length;
+
+        for (int i = 0; i < width; i++)
+        {
+            somme += Math.pow(imageGL[ligne1][i] - imageGL[ligne2][i], 2);
+        }
+        return Math.sqrt(somme);
+    }
+
+    /**
+     * Calcule le score total d'une image en sommant les distances euclidiennes entre chaque paire de lignes consécutives.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @return score euclidien total
+     */
+    public static double scoreEuclidean(int[][] imageGL)
+    {
+        double score = 0.0;
+
+        // Parcours toutes les paires de lignes consécutives
+        for (int i = 0; i < imageGL.length - 1; i++)
+        {
+            score += euclideanDistance(imageGL, i, i + 1);
+        }
+
+        return score;
+    }
+
+    /**
+     * Teste toutes les clés possibles pour identifier la clé qui produit l'image la plus cohérente.
+     * @param scrambledImage l'image brouillée à déchiffrer
+     * @return la clé qui donne le meilleur résultat
+     */
+    public static int breakKey(BufferedImage scrambledImage)
+    {
+        int height = scrambledImage.getHeight();
+        double bestScore = Double.MAX_VALUE; // Valeur maximale
+        int bestKey = 0;
+        double[][] top10Key = new double[10][2];
+
+        // Teste toutes les clés possibles (2^15 = 32768)
+        for (int key = 0; key < 32768; key++)
+        {
+            // Génère la permutation avec cette clé
+            int[] perm = generatePermutation(height, key);
+
+            // Déchiffre l'image avec cette clé
+            BufferedImage unscrambledImage = unScrambleLines(scrambledImage, perm);
+
+            // Convertie en niveaux de gris
+            int[][] imageGL = rgb2gl(unscrambledImage);
+
+            // Calcul le score euclidien
+            double score = scoreEuclidean(imageGL);
+
+            // Garde la meilleure clé
+            if (score < bestScore)
+            {
+                bestScore = score;
+                bestKey = key;
+            }
+
+            // Classement des 10 meilleures clés
+            for (int i = 0; i < top10Key.length; i++)
+            {
+                if (score < top10Key[i][0])
+                {
+                    for (int j = top10Key.length - 1; j > i; j--)
+                    {
+                        top10Key[j][0] = top10Key[j - 1][0];
+                        top10Key[j][1] = top10Key[j - 1][1];
+                    }
+                    top10Key[i][0] = score;
+                    top10Key[i][1] = key;
+                    break;
+                }
+            }
+        }
+
+        // Affiche le résultat final
+        System.out.println("\nClé trouvée: " + bestKey + " avec un score de : " + bestScore);
+
+        System.out.println("Affichage des 10 meilleurs clès ainsi que leur score\n");
+        for (int i = 0; i < top10Key.length; i++)
+        {
+            if (top10Key[i][1] != -1)  // Vérifie qu'une clé valide existe
+            {
+                System.out.println("Position " + (i+1) + " : Clé " + (int)top10Key[i][1] + " | Score : " + top10Key[i][0]);
+            }
+        }
+
+        return bestKey;
     }
 }
