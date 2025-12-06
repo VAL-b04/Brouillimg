@@ -12,7 +12,8 @@ public class BrouillimgTest
 
     public static void main(String[] args) throws IOException
     {
-        testConvertPixelsToLines();
+        testScrambleLines();
+        testBreakKey();
     }
 
     public static void printArray(int[] arr)
@@ -47,22 +48,50 @@ public class BrouillimgTest
 		printArray(Brouillimg.generatePermutation(8, 129));
     }
 
-    public static void testImageString() throws IOException
+    public static void testScrambleLines() throws IOException
     {
-    	
+        BufferedImage inputImage = ImageIO.read(new File("images/staline.jpg"));
+        int[] perm = Brouillimg.generatePermutation(1024, 1000);
+        BufferedImage scrambledImage = Brouillimg.scrambleLines(inputImage, perm);
+        ImageIO.write(scrambledImage, "png", new File("out.png"));
     }
 
-    public static void testConvertPixelsToLines()
+    public static void testUnScrambleLines() throws IOException
     {
-    	int[] trucs = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18};
-    	int[][][] amogus = Brouillimg.convertPixelsToLines(trucs, 3, 2);
-    	for (int i = 0; i < 2; i++)
-    	{
-    		System.out.println(i);
-    		for (int j = 0; j < 3; j++)
-    		{
-    			printArray(amogus[i][j]);
-    		}
-    	}
+        BufferedImage inputImage = ImageIO.read(new File("out.png"));
+        int[] perm = Brouillimg.generatePermutation(1024, 1000);
+        BufferedImage scrambledImage = Brouillimg.unScrambleLines(inputImage, perm);
+        ImageIO.write(scrambledImage, "png", new File("out2.png"));
+    }
+
+    public static void testEuclidian() throws IOException
+    {
+        BufferedImage inputImage = ImageIO.read(new File("images/staline.jpg"));
+        int[] perm = Brouillimg.generatePermutation(1024, 1000);
+        BufferedImage scrambledImage = Brouillimg.scrambleLines(inputImage, perm);
+        System.out.println(Brouillimg.scoreEuclidean(Brouillimg.rgb2gl(scrambledImage)));  
+        System.out.println(Brouillimg.scoreEuclidean(Brouillimg.rgb2gl(inputImage)));  
+    }
+
+    public static void testBreakKey() throws IOException
+    {
+        BufferedImage inputImage = ImageIO.read(new File("images/staline.jpg"));
+        int[] perm = Brouillimg.generatePermutation(1024, 19504);
+        BufferedImage scrambledImage = Brouillimg.scrambleLines(inputImage, perm);
+        System.out.println(Brouillimg.breakKey2(scrambledImage, "Pearson"));
+    }
+
+    public static void testGetSKeyImage() throws IOException
+    {
+        BufferedImage inputImage = ImageIO.read(new File("out.png"));
+        int[][] imageGL = Brouillimg.rgb2gl(inputImage);
+        int[] ss = Brouillimg.getSsKeyImage(imageGL);
+        System.out.println(ss[0]);
+        System.out.println(ss[1]);
+    }
+
+    public static int myAlgoBreakKey()
+    {
+        return 0;
     }
 }

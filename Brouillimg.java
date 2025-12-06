@@ -131,8 +131,8 @@ public class Brouillimg
         }
 
         // Affichage du tableau de permutation
-        System.out.print("Table de permutation générée :");
-        printArray(perm);
+        //System.out.print("Table de permutation générée :");
+        //printArray(perm);
 
         BufferedImage outputImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         
@@ -357,6 +357,8 @@ public class Brouillimg
         // Teste toutes les clés possibles (2^15 = 32768)
         for (int key = 0; key < 32768; key++)
         {
+            System.out.println(key);
+
             // Génère la permutation avec cette clé
             int[] perm = generatePermutation(height, key);
 
@@ -379,11 +381,15 @@ public class Brouillimg
                 score = scorePearson(imageGL);
             }
 
-            bestScore = score;
-            bestKey = key;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                bestKey = key;
+            }
+            
 
             // Classement des 10 meilleures clés
-            for (int i = 0; i < top10Key.length; i++)
+            for (int i = 0; i < 0; i++)
             {
                 // Décale les éléments
                 for (int j = top10Key.length - 1; j > i; j--)
@@ -412,4 +418,163 @@ public class Brouillimg
 
         return bestKey;
     }
+
+    public static int[] getSsKeyImage(int[][] imageGL)
+    {
+        final int height = imageGL.length;
+
+        // On utilisera le crière de la distance euclidienne, donc on par du MAX vers le MIN
+        double bestScore = Double.MAX_VALUE-1;
+        double secondBestScore = Double.MAX_VALUE;
+
+        // On associe chaque score avec leurs lignes respectives
+        int bestLine = 1;
+        int secondBestLine = 1;
+
+        // Recherche des deux lignes les plus similaires à la première (celle qui suit et celle qui précède)
+        for (int line = 1; line < height; line++)
+        {
+            double score = euclideanDistance(imageGL, 0, line);
+            if (score < secondBestScore)
+            {
+                if (score < bestScore)
+                {
+                    secondBestScore = bestScore;
+                    secondBestLine = bestLine;
+
+                    bestScore = score;
+                    bestLine = line;
+                }
+                else
+                {
+                    secondBestScore = score;
+                    secondBestLine = line;
+                }
+            }
+        }
+
+        // Détermine les valeurs de s selon les lignes trouvées (explication à détailler ...)
+        int x1 = 0;
+        while (x1 < height && (x1*bestLine)%height != 1)
+        {
+            x1++;
+        }
+        int x2 = 0;
+        while (x2 < height && (x2*secondBestLine)%height != 1)
+        {
+            x2++;
+        }
+        int[] ss = {(x1-1)/2, (x2-1)/2}
+
+        return ss;
+    }
+
+    public static int breakKey2(BufferedImage scrambledImage, String methodeType)
+    {
+        int height = scrambledImage.getHeight();
+
+        int bestKey = -1;
+        double bestScore;
+
+        // Pour Euclide : on cherche le score MIN (distance faible)
+        // Pour Pearson : on cherche le score MAX (corrélation élevée)
+        if (methodeType.equalsIgnoreCase("Euclide"))
+        {
+            bestScore = Double.MAX_VALUE;  // MAX pour chercher le MIN
+        }
+        else // Pearson
+        {
+            bestScore = Double.MIN_VALUE;  // MIN pour chercher le MAX
+        }
+
+        double[][] top10Key = new double[10][2];
+
+        // Initialise le tableau top10
+        for (int i = 0; i < top10Key.length; i++)
+        {
+            top10Key[i][0] = bestScore;
+            top10Key[i][1] = -1;
+        }
+
+        // Recherche des deux valeurs possibles pour le paramètre s de la clé
+        int[] ss = getSsKeyImage(rgb2gl(scrambledImage));
+        System.out.println(ss[0]);
+        System.out.println(ss[1]);
+
+        System.out.println("Recherche de la clé avec le critère : " + methodeType);
+
+        // Teste toutes les clés possibles selon les deux valeurs de s (2*256)
+        for (int s : ss)
+        {
+            for (int r = 0; r < 256; r++)
+            {
+                // Construit la clé à partir de r et de s
+                int key = s + 128*r;
+                System.out.println(key);
+
+                // Génère la permutation avec cette clé
+                int[] perm = generatePermutation(height, key);
+
+                // Déchiffre l'image avec cette clé
+                BufferedImage unscrambledImage = unScrambleLines(scrambledImage, perm);
+
+                // Convertit en niveaux de gris
+                int[][] imageGL = rgb2gl(unscrambledImage);
+
+                // Calcule le score selon le type choisi
+                double score;
+
+                // Appelle de la méthode appropriée
+                if (methodeType.equalsIgnoreCase("Euclide"))
+                {
+                    score = scoreEuclidean(imageGL);
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
+                        bestKey = key;
+                    }
+                }
+                else  // Pearson
+                {
+                    score = scorePearson(imageGL);
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestKey = key;
+                    }
+                }
+
+                // Classement des 10 meilleures clés
+                for (int i = 0; i < top10Key.length; i++)
+                {
+                    // Décale les éléments
+                    for (int j = top10Key.length - 1; j > i; j--)
+                    {
+                        top10Key[j][0] = top10Key[j - 1][0];
+                        top10Key[j][1] = top10Key[j - 1][1];
+                    }
+                    top10Key[i][0] = score;
+                    top10Key[i][1] = key;
+                    break;
+                }
+            }
+        }
+           
+
+        // Affiche le résultat final avec les bonnes valeurs
+        System.out.println("La méthode : " + methodeType + " avec la clé " + bestKey + " a obtenu un score de " + bestScore + "\n");
+
+        System.out.println("Top 10 des clés : ");
+
+        for (int i = 0; i < top10Key.length; i++)
+        {
+            if (top10Key[i][1] != -1)
+            {
+                System.out.println("Position " + (i+1) + " : Clé " + (int)top10Key[i][1] + " | Score : " + top10Key[i][0]);
+            }
+        }
+
+        return bestKey;
+    }
+
 }
