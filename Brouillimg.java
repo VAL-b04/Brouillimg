@@ -464,7 +464,7 @@ public class Brouillimg
         {
             x2++;
         }
-        int[] ss = {(x1-1)/2, (x2-1)/2}
+        int[] ss = {(x1-1)/2, (x2-1)/2};
 
         return ss;
     }
@@ -559,7 +559,6 @@ public class Brouillimg
                 }
             }
         }
-           
 
         // Affiche le résultat final avec les bonnes valeurs
         System.out.println("La méthode : " + methodeType + " avec la clé " + bestKey + " a obtenu un score de " + bestScore + "\n");
