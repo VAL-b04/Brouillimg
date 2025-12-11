@@ -173,6 +173,27 @@ public class Brouillimg
     }
 
     /**
+     * Reconstitue l'image originale en dé-mélangeant les lignes selon une permutation donnée.
+     * @param inputImg image brouillée en noi et blanc
+     * @param perm permutation des lignes (taille = hauteur de l'image)
+     * @return image de sortie en noir et blanc avec les lignes remises dans l'ordre original
+     */
+    public static int[][] unScrambleLinesGL(int[][] inputGL, int[] perm)
+    {
+        int height = inputGL.length;
+        int width = inputGL[0].length;
+
+        int[][] outputGL = new int[height][width];
+        
+        for (int y = 0; y < height; y++)
+        {
+            outputGL[perm[y]] = inputGL[y];
+        }
+
+        return outputGL;
+    }
+
+    /**
      * Renvoie la position de la ligne id dans l'image brouillée.
      * @param id  indice de la ligne dans l'image claire (0..size-1)
      * @param size nombre total de lignes dans l'image
@@ -193,7 +214,7 @@ public class Brouillimg
      */
     public static int getSKey(int key)
     {
-	    // masque binaire pour récupérer les 7 derniers bits
+        // masque binaire pour récupérer les 7 derniers bits
         return key & 0x7F;
     }
 
@@ -419,7 +440,13 @@ public class Brouillimg
         return bestKey;
     }
 
-    public static int[] getSsKeyImage(int[][] imageGL)
+    /**
+     * Retourne deux valeurs possibles pour le paramètre s de la clé.
+     * Explication à détailler en soutenance
+     * @param imageGl image mélangée en noir et blanc
+     * @return deux valeurs de s possibles de la clé à trouver
+     */
+    public static int[] getSsKeyFromImage(int[][] imageGL)
     {
         final int height = imageGL.length;
 
@@ -469,9 +496,51 @@ public class Brouillimg
         return ss;
     }
 
+    /**
+     * Retourne la valeur de r pour la clé à trouver, en sachant que le s est connu.
+     * Explication à détailler en soutenance
+     * @param imageGL l'image avec les lignes agencées (s déjà appliqué) mais décalée
+     * @return la valeur de r pour que l'image soit décryptée correctement
+     */
+    public static int getRKeyFromImage(int[][] imageGL) {
+        int n = imageGL.length;
+        double worstScore = Double.MIN_VALUE;
+        int worstLine = 0;
+        double score = 0;
+
+        for (int i = 0; i < n-1; i++) {
+            score = euclideanDistance(imageGL, i, i+1);
+            if (score > worstScore)
+            {
+                worstScore = score;
+                worstLine = i;
+            }
+        }
+
+        score = euclideanDistance(imageGL, 0, n-1);
+        if (score > worstScore)
+        {
+            worstLine = n-1;
+        }
+
+        System.out.println(worstLine);
+        if (worstLine < 256)
+        {
+            return 256 - worstLine;
+        }
+        return n - worstLine - 1;
+    }
+
+    /**
+     * Version plus "mathématique" de breakKey, qui ne regarde que 2 clés
+     * @param scrambledImage image mélangée à décrypter
+     * @param methodeType type de score à utiliser : "Euclide" ou "Pearson"
+     * @return la clé qui donne le meilleur résultat
+     */
     public static int breakKey2(BufferedImage scrambledImage, String methodeType)
     {
         int height = scrambledImage.getHeight();
+        int width = scrambledImage.getWidth();
 
         int bestKey = -1;
         double bestScore;
@@ -487,91 +556,61 @@ public class Brouillimg
             bestScore = Double.MIN_VALUE;  // MIN pour chercher le MAX
         }
 
-        double[][] top10Key = new double[10][2];
+        // Convertit en niveaux de gris
+        int[][] imageGL = rgb2gl(scrambledImage);
 
-        // Initialise le tableau top10
-        for (int i = 0; i < top10Key.length; i++)
-        {
-            top10Key[i][0] = bestScore;
-            top10Key[i][1] = -1;
-        }
+        int[][] unscrambledImage = new int[height][width];
 
         // Recherche des deux valeurs possibles pour le paramètre s de la clé
-        int[] ss = getSsKeyImage(rgb2gl(scrambledImage));
-        System.out.println(ss[0]);
-        System.out.println(ss[1]);
+        int[] ss = getSsKeyFromImage(imageGL);
 
         System.out.println("Recherche de la clé avec le critère : " + methodeType);
 
-        // Teste toutes les clés possibles selon les deux valeurs de s (2*256)
+        // Teste les deux valeurs de s (2*256)
         for (int s : ss)
         {
-            for (int r = 0; r < 256; r++)
+            // Génère la permutation avec ce s
+            int[] perm = generatePermutation(height, s);
+
+            // Déchiffre l'image avec cette clé
+            unscrambledImage = unScrambleLinesGL(imageGL, perm);
+
+            // Calcule le score selon le type choisi
+            double score;
+
+            // Appelle de la méthode appropriée
+            if (methodeType.equalsIgnoreCase("Euclide"))
             {
-                // Construit la clé à partir de r et de s
-                int key = s + 128*r;
-                System.out.println(key);
-
-                // Génère la permutation avec cette clé
-                int[] perm = generatePermutation(height, key);
-
-                // Déchiffre l'image avec cette clé
-                BufferedImage unscrambledImage = unScrambleLines(scrambledImage, perm);
-
-                // Convertit en niveaux de gris
-                int[][] imageGL = rgb2gl(unscrambledImage);
-
-                // Calcule le score selon le type choisi
-                double score;
-
-                // Appelle de la méthode appropriée
-                if (methodeType.equalsIgnoreCase("Euclide"))
+                score = scoreEuclidean(unscrambledImage);
+                if (score < bestScore)
                 {
-                    score = scoreEuclidean(imageGL);
-                    if (score < bestScore)
-                    {
-                        bestScore = score;
-                        bestKey = key;
-                    }
+                    bestScore = score;
+                    bestKey = s;
                 }
-                else  // Pearson
+            }
+            else  // Pearson
+            {
+                score = scorePearson(unscrambledImage);
+                if (score > bestScore)
                 {
-                    score = scorePearson(imageGL);
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        bestKey = key;
-                    }
-                }
-
-                // Classement des 10 meilleures clés
-                for (int i = 0; i < top10Key.length; i++)
-                {
-                    // Décale les éléments
-                    for (int j = top10Key.length - 1; j > i; j--)
-                    {
-                        top10Key[j][0] = top10Key[j - 1][0];
-                        top10Key[j][1] = top10Key[j - 1][1];
-                    }
-                    top10Key[i][0] = score;
-                    top10Key[i][1] = key;
-                    break;
+                    bestScore = score;
+                    bestKey = s;
                 }
             }
         }
 
+        // Regénère la permutation avec le meilleur s
+        int[] perm = generatePermutation(height, bestKey);
+
+        // Déchiffre l'image avec ce s
+        unscrambledImage = unScrambleLinesGL(imageGL, perm);
+
+        System.out.println(bestKey);
+        int r = getRKeyFromImage(unscrambledImage);
+        bestKey += 128*r;
+           
         // Affiche le résultat final avec les bonnes valeurs
-        System.out.println("La méthode : " + methodeType + " avec la clé " + bestKey + " a obtenu un score de " + bestScore + "\n");
-
-        System.out.println("Top 10 des clés : ");
-
-        for (int i = 0; i < top10Key.length; i++)
-        {
-            if (top10Key[i][1] != -1)
-            {
-                System.out.println("Position " + (i+1) + " : Clé " + (int)top10Key[i][1] + " | Score : " + top10Key[i][0]);
-            }
-        }
+        System.out.println("La méthode : " + methodeType + " a trouvé comme clé : " + bestKey);
 
         return bestKey;
     }
