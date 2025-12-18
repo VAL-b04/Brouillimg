@@ -512,7 +512,7 @@ public class Brouillimg
     /**
      * Teste toutes les clés possibles pour identifier la clé qui produit l'image la plus cohérente.
      * @param scrambledImage l'image brouillée à déchiffrer
-     * @param methodeType type de score à utiliser : "Euclide" ou "Pearson"
+     * @param methodeType type de score à utiliser : "Euclide", "Manhattan", "Pearson", "NCC" ou "KL"
      * @return la clé qui donne le meilleur résultat
      */
     public static int breakKey(BufferedImage scrambledImage, String methodeType)
@@ -522,15 +522,21 @@ public class Brouillimg
         int bestKey = -1;
         double bestScore;
 
-        // Pour Euclide : on cherche le score MIN (distance faible)
-        // Pour Pearson : on cherche le score MAX (corrélation élevée)
-        if (methodeType.equalsIgnoreCase("Euclide"))
+        // Initialisation du score selon la méthode
+        switch (methodeType.toLowerCase())
         {
-            bestScore = Double.MAX_VALUE;  // MAX pour chercher le MIN
-        }
-        else // Pearson
-        {
-            bestScore = Double.MIN_VALUE;  // MIN pour chercher le MAX
+            case "pearson":
+            case "ncc":
+                // Pour les méthodes de corrélation : on cherche le score MAX
+                bestScore = Double.MIN_VALUE;
+                break;
+            case "euclide":
+            case "manhattan":
+            case "kl":
+            default:
+                // Pour les méthodes de distance : on cherche le score MIN
+                bestScore = Double.MAX_VALUE;
+                break;
         }
 
         double[][] top10Key = new double[10][2];
@@ -561,22 +567,51 @@ public class Brouillimg
             // Calcule le score selon le type choisi
             double score;
 
-            // Appelle de la méthode appropriée
-            if (methodeType.equalsIgnoreCase("Euclide"))
+            switch (methodeType.toLowerCase())
             {
-                score = scoreEuclidean(imageGL);
-            }
-            else  // Pearson
-            {
-                score = scorePearson(imageGL);
+                case "euclide":
+                    score = scoreEuclidean(imageGL);
+                    break;
+                case "manhattan":
+                    score = scoreManhattan(imageGL);
+                    break;
+                case "pearson":
+                    score = scorePearson(imageGL);
+                    break;
+                case "ncc":
+                    score = scoreNCC(imageGL);
+                    break;
+                case "kl":
+                    score = scoreKullbackLeibler(imageGL);
+                    break;
+                default:
+                    score = scoreEuclidean(imageGL);
+                    break;
             }
 
-            if (score < bestScore)
+            // Mise à jour du meilleur score selon la méthode
+            boolean isBetter = false;
+            switch (methodeType.toLowerCase())
+            {
+                case "pearson":
+                case "ncc":
+                    // Pour les corrélations, un score plus élevé est meilleur
+                    isBetter = score > bestScore;
+                    break;
+                case "euclide":
+                case "manhattan":
+                case "kl":
+                default:
+                    // Pour les distances, un score plus faible est meilleur
+                    isBetter = score < bestScore;
+                    break;
+            }
+
+            if (isBetter)
             {
                 bestScore = score;
                 bestKey = key;
             }
-            
 
             // Classement des 10 meilleures clés
             for (int i = 0; i < 0; i++)
