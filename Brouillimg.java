@@ -319,7 +319,7 @@ public class Brouillimg
     }
 
     /**
-     * Calcule le score total d'une image en sommant les corrélations de Pearson 
+     * Calcule le score total d'une image en sommant les corrélations de Pearson
      * entre chaque paire de lignes consécutives.
      * Plus le score est ÉLEVÉ, plus l'image est probablement correcte.
      * @param imageGL matrice de l'image en noir et blanc
@@ -334,6 +334,175 @@ public class Brouillimg
         for (int i = 0; i < height - 1; i++)
         {
             score += pearsonCorrelation(imageGL, i, i + 1);
+        }
+
+        return score;
+    }
+
+    // METHODE MANHATTAN
+    /**
+     * Calcule la distance de Manhattan entre deux lignes de pixels d'une image.
+     * La distance de Manhattan est la somme des valeurs absolues des différences.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @param ligne1 indice de la première ligne
+     * @param ligne2 indice de la deuxième ligne
+     * @return distance de Manhattan entre les deux lignes
+     */
+    public static double manhattanDistance(int[][] imageGL, int ligne1, int ligne2)
+    {
+        double somme = 0.0;
+        int width = imageGL[0].length;
+
+        for (int i = 0; i < width; i++)
+        {
+            somme += Math.abs(imageGL[ligne1][i] - imageGL[ligne2][i]);
+        }
+        return somme;
+    }
+
+    /**
+     * Calcule le score total d'une image en sommant les distances de Manhattan
+     * entre chaque paire de lignes consécutives.
+     * Plus le score est FAIBLE, plus l'image est probablement correcte.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @return score Manhattan total
+     */
+    public static double scoreManhattan(int[][] imageGL)
+    {
+        double score = 0.0;
+
+        // Parcours toutes les paires de lignes consécutives
+        for (int i = 0; i < imageGL.length - 1; i++)
+        {
+            score += manhattanDistance(imageGL, i, i + 1);
+        }
+
+        return score;
+    }
+
+    // CORRELATION CROISÉ NORMALISÉ
+    /**
+     * Calcule la corrélation croisée normalisée (NCC) entre deux lignes de pixels.
+     * La NCC mesure la similarité entre deux signaux normalisés.
+     * Retourne une valeur entre -1 et 1, où 1 indique une corrélation parfaite.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @param ligne1 indice de la première ligne
+     * @param ligne2 indice de la deuxième ligne
+     * @return coefficient de corrélation croisée normalisée (entre -1 et 1)
+     */
+    public static double normalizedCrossCorrelation(int[][] imageGL, int ligne1, int ligne2)
+    {
+        int width = imageGL[0].length;
+        double sommeXY = 0.0;
+        double sommeX2 = 0.0;
+        double sommeY2 = 0.0;
+
+        for (int i = 0; i < width; i++)
+        {
+            int x = imageGL[ligne1][i];
+            int y = imageGL[ligne2][i];
+            
+            sommeXY += x * y;
+            sommeX2 += x * x;
+            sommeY2 += y * y;
+        }
+
+        double denominateur = Math.sqrt(sommeX2) * Math.sqrt(sommeY2);
+
+        // Éviter la division par zéro
+        if (denominateur == 0)
+        {
+            return 0.0;
+        }
+
+        return sommeXY / denominateur;
+    }
+
+    /**
+     * Calcule le score total d'une image en sommant les corrélations croisées normalisées
+     * entre chaque paire de lignes consécutives.
+     * Plus le score est ÉLEVÉ, plus l'image est probablement correcte.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @return score NCC total
+     */
+    public static double scoreNCC(int[][] imageGL)
+    {
+        double score = 0.0;
+        int height = imageGL.length;
+
+        // Parcours toutes les paires de lignes consécutives
+        for (int i = 0; i < height - 1; i++)
+        {
+            score += normalizedCrossCorrelation(imageGL, i, i + 1);
+        }
+
+        return score;
+    }
+
+    // DIVERGENCE DE KULBACK-LEIBLER
+    /**
+     * Calcule la divergence de Kullback-Leibler (KL) entre deux lignes de pixels.
+     * La divergence KL mesure la différence entre deux distributions de probabilités.
+     * Plus la valeur est faible, plus les distributions sont similaires.
+     * Note: les valeurs de pixels sont normalisées pour former des distributions de probabilités.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @param ligne1 indice de la première ligne
+     * @param ligne2 indice de la deuxième ligne
+     * @return divergence de Kullback-Leibler (toujours >= 0)
+     */
+    public static double kullbackLeiblerDivergence(int[][] imageGL, int ligne1, int ligne2)
+    {
+        int width = imageGL[0].length;
+        double epsilon = 1e-10; // Pour éviter log(0)
+        
+        // Normalisation des lignes en distributions de probabilités
+        double[] p = new double[width];
+        double[] q = new double[width];
+        double sommeP = 0.0;
+        double sommeQ = 0.0;
+
+        // Calcul des sommes pour normalisation
+        for (int i = 0; i < width; i++)
+        {
+            p[i] = imageGL[ligne1][i] + epsilon;
+            q[i] = imageGL[ligne2][i] + epsilon;
+            sommeP += p[i];
+            sommeQ += q[i];
+        }
+
+        // Normalisation
+        for (int i = 0; i < width; i++)
+        {
+            p[i] /= sommeP;
+            q[i] /= sommeQ;
+        }
+
+        // Calcul de la divergence KL: KL(P||Q) = sum(P(i) * log(P(i)/Q(i)))
+        double divergence = 0.0;
+        for (int i = 0; i < width; i++)
+        {
+            divergence += p[i] * Math.log(p[i] / q[i]);
+        }
+
+        return divergence;
+    }
+
+    /**
+     * Calcule le score total d'une image en sommant les divergences de Kullback-Leibler
+     * entre chaque paire de lignes consécutives.
+     * Plus le score est FAIBLE, plus l'image est probablement correcte.
+     * @param imageGL matrice de l'image en noir et blanc
+     * @return score KL total
+     */
+    public static double scoreKullbackLeibler(int[][] imageGL)
+    {
+        double score = 0.0;
+        int height = imageGL.length;
+
+        // Parcours toutes les paires de lignes consécutives
+        for (int i = 0; i < height - 1; i++)
+        {
+            score += kullbackLeiblerDivergence(imageGL, i, i + 1);
         }
 
         return score;
@@ -608,7 +777,7 @@ public class Brouillimg
         System.out.println(bestKey);
         int r = getRKeyFromImage(unscrambledImage);
         bestKey += 128*r;
-           
+
         // Affiche le résultat final avec les bonnes valeurs
         System.out.println("La méthode : " + methodeType + " a trouvé comme clé : " + bestKey);
 
