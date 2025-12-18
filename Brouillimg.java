@@ -614,17 +614,32 @@ public class Brouillimg
             }
 
             // Classement des 10 meilleures clés
-            for (int i = 0; i < 0; i++)
+            for (int i = 0; i < top10Key.length; i++)
             {
-                // Décale les éléments
-                for (int j = top10Key.length - 1; j > i; j--)
+                boolean better;
+
+                if (methodeType.equalsIgnoreCase("pearson") || methodeType.equalsIgnoreCase("ncc"))
                 {
-                    top10Key[j][0] = top10Key[j - 1][0];
-                    top10Key[j][1] = top10Key[j - 1][1];
+                    better = score > top10Key[i][0]; // max
                 }
-                top10Key[i][0] = score;
-                top10Key[i][1] = key;
-                break;
+                else
+                {
+                    better = score < top10Key[i][0]; // min
+                }
+
+                if (better)
+                {
+                    // Décalage vers la droite
+                    for (int j = top10Key.length - 1; j > i; j--)
+                    {
+                        top10Key[j][0] = top10Key[j - 1][0];
+                        top10Key[j][1] = top10Key[j - 1][1];
+                    }
+
+                    top10Key[i][0] = score;
+                    top10Key[i][1] = key;
+                    break;
+                }
             }
         }
 
