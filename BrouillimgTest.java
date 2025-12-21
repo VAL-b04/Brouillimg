@@ -23,7 +23,9 @@ public class BrouillimgTest
         testUnScrambleLines(48+255*128, "out8.png");
         */
         //testUnScrambleLines(53249, "out2.png");
+        
         testBreakKey();
+        //testBreakKey2();
     }
 
     public static void printArray(int[] arr)
@@ -76,7 +78,7 @@ public class BrouillimgTest
 
     public static void testEuclidian() throws IOException
     {
-        BufferedImage inputImage = ImageIO.read(new File("images/staline.jpg"));
+        BufferedImage inputImage = ImageIO.read(new File("images/arc-en-ciel-traits.jpg"));
         int[] perm = Brouillimg.generatePermutation(1024, 1000);
         BufferedImage scrambledImage = Brouillimg.scrambleLines(inputImage, perm);
         System.out.println(Brouillimg.scoreEuclidean(Brouillimg.rgb2gl(scrambledImage)));  
@@ -85,8 +87,16 @@ public class BrouillimgTest
 
     public static void testBreakKey() throws IOException
     {
-        BufferedImage inputImage = ImageIO.read(new File("images/staline.jpg"));
-        int[] perm = Brouillimg.generatePermutation(1024, 42);
+        BufferedImage inputImage = ImageIO.read(new File("images/arc_en_ciel_trait.jpg"));
+        int[] perm = Brouillimg.generatePermutation(512, 11114);
+        BufferedImage scrambledImage = Brouillimg.scrambleLines(inputImage, perm);
+        Brouillimg.breakKey(scrambledImage, "Euclide");
+    }
+
+    public static void testBreakKey2() throws IOException
+    {
+        BufferedImage inputImage = ImageIO.read(new File("images/arc_en_ciel_trait.jpg"));
+        int[] perm = Brouillimg.generatePermutation(512, 11114);
         BufferedImage scrambledImage = Brouillimg.scrambleLines(inputImage, perm);
         Brouillimg.breakKey2(scrambledImage, "Euclide");
     }
@@ -100,8 +110,10 @@ public class BrouillimgTest
         System.out.println(ss[1]);
     }
 
-    public static int myAlgoBreakKey()
+    public static void testIsNumber()
     {
-        return 0;
+        System.out.println(Brouillimg.isNumber("49130"));
+        System.out.println(Brouillimg.isNumber("4ab30"));
+        System.out.println(Brouillimg.isNumber(""));
     }
 }
