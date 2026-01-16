@@ -1,4 +1,4 @@
-# Brouillimg - Image Line Scrambler
+# Brouillimg
 
 Un **système de chiffrement d'images** développé en **Java**, utilisant une technique de permutation de lignes pour brouiller et déchiffrer des images. Le projet inclut également des algorithmes de **cryptanalyse** pour retrouver la clé de chiffrement sans la connaître.
 
@@ -97,7 +97,7 @@ Pour chaque s dans {s₁, s₂} :
 **Gain de performance** :
 - **breakKey()** : teste 32 768 clés
 - **breakKey2()** : teste ~256 clés (2 valeurs de `s` × ~128 positions pour `r`)
-- **Accélération** : **~64 fois plus rapide** 🚀
+- **Accélération** : **~64 fois plus rapide**
 
 ---
 
@@ -153,5 +153,5 @@ java Brouillimg
    - `pearson` : corrélation de Pearson
    - `ncc` : corrélation croisée normalisée
    - `kl` : divergence de Kullback-Leibler
-3. **Option 1** : Cliquer sur "Casser la clé" → `breakKey()` (force brute, lent mais exhaustif)
-4. **Option 2** : Cliquer sur "Casser la clé (2)" → `breakKey2()` (rapide et intelligent)
+3. **Option 1** : Cliquer sur "Casser la clé" → `breakKey()`
+4. **Option 2** : Cliquer sur "Casser la clé (2)" → `breakKey2()`
